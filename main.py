@@ -2,6 +2,11 @@ import sys
 import wave
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel
 import pyaudio
+from whisper import SpeechRecognizer
+from ollama import OllamaClient
+from kokoroTTS import TTSModel
+import simpleaudio as sa
+
 
 class AudioRecorder(QWidget):
     def __init__(self):
@@ -16,6 +21,9 @@ class AudioRecorder(QWidget):
         self.rate = 44100  # Sampling rate
         self.chunk = 1024  # Data chunk size
         self.filename = "output.wav"
+        self.whisper = SpeechRecognizer()
+        self.ollama = OllamaClient(endpoint="http://192.168.1.182:11434", chat_system_prompt="You are a Japanese tutor. Your student is just learning japanese. Help them practice by having a conversation with them. First talk in English then say the same thing in Japanese.", timeout=120)
+        self.tts = TTSModel(voice='af_heart')
         
         # Initialize PyAudio
         self.audio = pyaudio.PyAudio()
@@ -82,9 +90,25 @@ class AudioRecorder(QWidget):
             wf.setsampwidth(self.audio.get_sample_size(self.audio_format))
             wf.setframerate(self.rate)
             wf.writeframes(b''.join(self.frames))
-        
         self.status_label.setText(f'Recording saved to {self.filename}.')
+        self.translateOllamaKokoroTTS()
     
+    def translateOllamaKokoroTTS(self):
+        text = self.whisper.transcribe(self.filename)
+        print(f'Whisper Text: {text}')
+        response = self.ollama.chat(text, model="llama3.3:latest")
+        response = response.replace('\n', ' ')
+        print(f'Ollama Response: {response}')
+        tts_filepath = self.tts.generate_audio(response)
+        self.play_wav(tts_filepath)
+        self.status_label.setText(f'Ready for next recording.')
+
+
+    def play_wav(self, file_path):
+        wave_obj = sa.WaveObject.from_wave_file(file_path)
+        play_obj = wave_obj.play()
+        play_obj.wait_done()
+
     def closeEvent(self, event):
         # Ensure the audio stream is closed properly on exit
         if hasattr(self, 'stream') and self.stream.is_active():

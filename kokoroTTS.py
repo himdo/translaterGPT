@@ -279,6 +279,7 @@ class TTSModel:
             output_path = f"{output_dir}/{i}.wav"
             sf.write(output_path, audio, 24000)
             print(f"Saved to {output_path}")
+            return output_path
 
 # Example usage (you can remove this part for the module itself)
 if __name__ == "__main__":

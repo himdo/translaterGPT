@@ -60,8 +60,8 @@ class OllamaClient:
         self.chat_history.append({"role": "user", "content": prompt})
         payload["messages"] = self.chat_history
         response = self._request("POST", "/api/chat", json=payload)
-        self.chat_history.append({"role": "assistant", "content": response["response"]})
-        return response
+        self.chat_history.append(response['message'])
+        return response['message']['content']
     
     def chat_reset(self):
         """
@@ -101,10 +101,6 @@ if __name__ == "__main__":
     )
 
     try:
-        # List models
-        # models = client.list_models()
-        # print("Available Models:", models)
-
         # Generate a response
         prompt = "tell me a quick story"
         response = client.generate(prompt, model="llama3.3:latest", )
